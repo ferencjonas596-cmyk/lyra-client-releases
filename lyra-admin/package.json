@@ -1,0 +1,6 @@
+{
+  "name": "lyra-admin", "version": "0.3.0", "private": true, "type": "module",
+  "scripts": { "start": "node --env-file-if-exists=.env server.mjs", "setup": "node setup.mjs", "test": "node --test test/*.test.mjs" },
+  "engines": { "node": ">=22.0.0" },
+  "dependencies": { "express": "^5.1.0", "multer": "^2.0.2", "yaml": "^2.8.0", "semver": "^7.7.0" }
+}

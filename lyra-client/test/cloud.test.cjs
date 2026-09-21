@@ -1,0 +1,42 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const { EventEmitter } = require('node:events');
+const { createCloud, SERVER_URL } = require('../electron/cloud.cjs');
+test('remote content cache, update states, ready installation and reconnect protection', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lyra-cloud-test-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const content = { title: 'Remote title', subtitle: 'Remote subtitle', announcement: '', accent: '#7762c9', revision: 1 };
+  let online = true, installed = false, feed = '';
+  const request = async () => { if (!online) throw Error('offline'); return new Response(JSON.stringify(content)); };
+  const updater = new EventEmitter();
+  updater.setFeedURL = config => { feed = config.url; };
+  updater.checkForUpdates = async () => { updater.emit('checking-for-update'); updater.emit('update-not-available'); };
+  updater.quitAndInstall = () => { installed = true; };
+  await fs.writeFile(path.join(directory, 'server.json'), JSON.stringify({ url: 'https://other.example' }));
+  await fs.writeFile(path.join(directory, 'content.json'), JSON.stringify({ server: 'https://other.example', content }));
+  const cloud = await createCloud({ directory, request, updater, packaged: true, version: '0.3.0' });
+  assert.equal(cloud.snapshot().server, 'https://lyraclientadatbazis.craftmc.eu');
+  assert.equal(cloud.snapshot().content, null);
+  assert.throws(() => cloud.install());
+  assert.equal(cloud.connect, undefined);
+  await cloud.refreshContent();
+  await cloud.check();
+  assert.equal(feed, `${SERVER_URL}/updates/`);
+  assert.equal(cloud.snapshot().content.title, 'Remote title');
+  online = false; await cloud.refreshContent();
+  assert.equal(cloud.snapshot().content.title, 'Remote title');
+  assert.match(cloud.snapshot().contentError, /mentett/);
+  updater.emit('update-available', { version: '0.4.0' });
+
+  updater.emit('download-progress', { percent: 53.4 });
+  assert.equal(cloud.snapshot().update.progress, 53);
+  updater.emit('update-downloaded', { version: '0.4.0' });
+  cloud.install(); await new Promise(resolve => setImmediate(resolve)); assert.equal(installed, true);
+  const restored = await createCloud({ directory, request, updater: new EventEmitter(), packaged: false, version: '0.3.0' });
+  assert.equal(restored.snapshot().server, SERVER_URL);
+  assert.equal(restored.snapshot().content.revision, 1);
+
+});

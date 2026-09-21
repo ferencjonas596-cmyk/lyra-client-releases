@@ -1,0 +1,14 @@
+services:
+  admin:
+    build: .
+    restart: unless-stopped
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?Set ADMIN_TOKEN}
+      PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL}
+      HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:4310:4310"
+    volumes:
+      - lyra-data:/data
+volumes:
+  lyra-data:

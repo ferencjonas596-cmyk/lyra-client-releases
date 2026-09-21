@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/
+_site/
+.env
+.env.*
+!.env.example
+data/
+*.log
+*.exe
+*.blockmap

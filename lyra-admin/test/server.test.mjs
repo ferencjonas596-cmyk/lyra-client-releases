@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import YAML from 'yaml';
+import { createAdmin } from '../server.mjs';
+import { initialContent } from '../domain.mjs';
+
+test('admin auth, draft separation, publishing, artifact verification and atomic release feed', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lyra-admin-test-'));
+  const token = crypto.randomBytes(32).toString('hex');
+  const app = await createAdmin({ directory, token, publicURL: 'http://127.0.0.1:4310' });
+  const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await fs.rm(directory, { recursive: true, force: true }); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const api = (route, options = {}) => fetch(`${base}${route}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...options.headers } });
+  assert.equal((await fetch(`${base}/api/admin/state`)).status, 401);
+  assert.equal((await api('/api/admin/state', { headers: { Origin: 'https://other.example' } })).status, 403);
+  assert.equal((await fetch(`${base}/updates/latest.yml`)).status, 404);
+  const draft = { ...initialContent, title: 'Tesztelt tartalom' };
+  assert.equal((await api('/api/admin/draft', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) })).status, 200);
+  assert.equal((await (await fetch(`${base}/api/content`)).json()).title, initialContent.title);
+  assert.equal((await api('/api/admin/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"revision":0}' })).status, 200);
+  assert.equal((await (await fetch(`${base}/api/content`)).json()).title, draft.title);
+  assert.equal((await api('/api/admin/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"revision":0}' })).status, 409);
+  const bytes = Buffer.from('MZ-unit-test-fixture-not-an-executable');
+  function bundle(version, corrupt = false, remote = false) {
+    const name = `Lyra-Client-Setup-${version}.exe`;
+    const sha512 = crypto.createHash('sha512').update(bytes).digest('base64');
+    const url = remote ? `https://other.example/${name}` : name;
+    const form = new FormData();
+    form.append('files', new Blob([bytes]), name);
+    form.append('files', new Blob([YAML.stringify({ version, files: [{ url, sha512: corrupt ? 'bad' : sha512, size: bytes.length }], path: name, sha512 })]), 'latest.yml');
+    return form;
+  }
+  assert.equal((await api('/api/admin/deploy', { method: 'POST', body: bundle('0.3.0', true) })).status, 400);
+  assert.equal((await fetch(`${base}/updates/latest.yml`)).status, 404);
+  assert.equal((await api('/api/admin/deploy', { method: 'POST', body: bundle('0.3.0', false, true) })).status, 400);
+  assert.equal((await api('/api/admin/deploy', { method: 'POST', body: bundle('0.3.0') })).status, 200);
+  const feed = YAML.parse(await (await fetch(`${base}/updates/latest.yml`)).text());
+  assert.equal(feed.version, '0.3.0');
+  assert.deepEqual(Buffer.from(await (await fetch(`${base}/updates/${feed.path}`)).arrayBuffer()), bytes);
+  assert.equal((await api('/api/admin/deploy', { method: 'POST', body: bundle('0.2.0') })).status, 400);
+  assert.equal((await api('/api/admin/deploy', { method: 'POST', body: bundle('0.4.0', true) })).status, 400);
+  assert.equal(YAML.parse(await (await fetch(`${base}/updates/latest.yml`)).text()).version, '0.3.0');
+  assert.deepEqual(await fs.readdir(path.join(directory, 'incoming')), []);
+  const restored = await createAdmin({ directory, token, publicURL: 'http://127.0.0.1:4310' });
+  assert.ok(restored);
+});
