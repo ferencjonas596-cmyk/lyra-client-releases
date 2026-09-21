@@ -32,6 +32,7 @@ test('generates compatible endpoints only after every release asset passes verif
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.writeFile(path.join(root, 'content.json'), JSON.stringify(content));
   await fs.writeFile(path.join(root, 'index.html'), '<!doctype html><title>Lyra</title>');
+  await fs.writeFile(path.join(root, 'lyra-logo.png'), 'logo-fixture');
   const out = path.join(root, 'site');
   const fixtures = new Map([
     [`https://api.github.com/repos/${repository}/releases/latest`, JSON.stringify(release)],

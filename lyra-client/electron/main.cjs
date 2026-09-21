@@ -4,7 +4,7 @@ const smoke = process.argv.includes('--smoke-test');
 if (process.env.LYRA_SOFTWARE_RENDERING === '1') app.disableHardwareAcceleration();
 if (process.env.LYRA_USER_DATA) app.setPath('userData', process.env.LYRA_USER_DATA);
 function createWindow() {
-  const win = new BrowserWindow({ width: 1280, height: 840, minWidth: 940, minHeight: 680, backgroundColor: '#090d18', title: 'Lyra Client', autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  const win = new BrowserWindow({ width: 1280, height: 840, minWidth: 940, minHeight: 680, backgroundColor: '#090d18', title: 'Lyra Client', icon: path.join(__dirname, '../dist/lyra-logo.png'), autoHideMenuBar: true, show: false, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', event => event.preventDefault());
   win.once('ready-to-show', () => { if (!smoke) win.show(); });
@@ -57,3 +57,4 @@ app.whenReady().then(async () => {
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+

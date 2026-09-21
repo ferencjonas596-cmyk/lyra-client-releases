@@ -60,7 +60,8 @@ Adminpanel: `cd lyra-admin`, `npm ci`, `npm run setup`, `npm start`. A setup a s
 ## Jelenlegi korlátok
 
 - A Minecraft telepítése/indítása és a Microsoft-bejelentkezés még placeholder.
-- A modkapcsolók demók, a logó ideiglenes SVG.
+- A modkapcsolók demók, a logó a tulajdonos által megadott Lyra embléma.
 - Az EXE nincs kiadói tanúsítvánnyal aláírva.
 - Az automatikus build és unit tesztek nem helyettesítik a telepített Windows-alkalmazás és az önfrissítés kézi tesztjét.
 - A helyi adminpanel nem publikál automatikusan GitHubra. Az online tartalomszerkesztés jelenleg a GitHub `content.json` szerkesztőjén keresztül történik.
+

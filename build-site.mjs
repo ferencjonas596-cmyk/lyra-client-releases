@@ -63,6 +63,7 @@ export async function buildSite({ fetcher = fetch, root = '.', out = '_site' } =
   await fs.writeFile(path.join(out, 'updates/latest.yml'), YAML.stringify(feed));
   await fs.writeFile(path.join(out, 'status.json'), JSON.stringify({ version: verified.version, contentRevision: content.revision, installerBytes: bytes.length, builtAt: new Date().toISOString() }, null, 2));
   await fs.copyFile(path.join(root, 'index.html'), path.join(out, 'index.html'));
+  await fs.copyFile(path.join(root, 'lyra-logo.png'), path.join(out, 'lyra-logo.png'));
   await fs.writeFile(path.join(out, '.nojekyll'), '');
   console.log(`Verified ${verified.version}: ${bytes.length} bytes; content revision ${content.revision}`);
   return feed;

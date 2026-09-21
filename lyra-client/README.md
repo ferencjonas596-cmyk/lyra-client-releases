@@ -1,4 +1,4 @@
-# Lyra Client 0.3.1
+# Lyra Client 0.3.2
 
 Electron + React + TypeScript + Vite launcher-váz Windowsra. Home, Mods, Settings oldalak és Play gomb, Mojang verziólista, távoli tartalom és electron-updater.
 
@@ -19,6 +19,7 @@ A helyi adminpanel szerkesztése nem módosítja automatikusan a GitHub Pages ta
 
 ## Korlátok és ellenőrzés
 
-A Minecraft letöltése/indítása, Java-kezelés és Microsoft-hitelesítés placeholder. A modkapcsolók demók, a logó ideiglenes SVG. Az EXE nincs kiadói tanúsítvánnyal aláírva.
+A Minecraft letöltése/indítása, Java-kezelés és Microsoft-hitelesítés placeholder. A modkapcsolók demók, a logó a tulajdonos által megadott Lyra embléma. Az EXE nincs kiadói tanúsítvánnyal aláírva.
 
 Az automatizált teszt az updater állapotait tesztpéldánnyal vizsgálja; nem igazolja a telepített EXE teljes frissítési ciklusát. A fejlesztői környezetben az Electron GPU-folyamata leállt, ezért a valódi Windows GUI-t és az önfrissítést normál Windows-munkamenetben még tesztelni kell.
+
