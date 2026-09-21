@@ -1,0 +1,62 @@
+name: Build Windows installer
+on:
+  workflow_dispatch:
+    inputs:
+      create_draft:
+        description: Create a new draft GitHub Release after building
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: lyra-windows-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: lyra-client/package-lock.json
+      - run: npm ci
+        working-directory: lyra-client
+      - run: npm test
+        working-directory: lyra-client
+      - run: npm run package
+        working-directory: lyra-client
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lyra-windows-installer
+          if-no-files-found: error
+          path: |
+            lyra-client/release/Lyra-Client-Setup-*.exe
+            lyra-client/release/Lyra-Client-Setup-*.exe.blockmap
+            lyra-client/release/latest.yml
+  draft:
+    if: inputs.create_draft
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lyra-windows-installer
+          path: release
+      - name: Create draft without replacing any existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./lyra-client/package.json').version")
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists. Increase the application version first."
+            exit 1
+          fi
+          gh release create "v$version" release/* --draft --target "$GITHUB_SHA" --title "Lyra Client $version" --notes-file RELEASE-NOTES.md
