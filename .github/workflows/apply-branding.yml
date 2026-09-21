@@ -1,0 +1,43 @@
+name: Apply approved Lyra branding
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verify and apply approved files
+        run: |
+          echo '0d788d18d0e8bd4921b76519b21e4e5f29cb52a6011ca4debbd9b7b92d1c487c  branding-update.zip' | sha256sum --check
+          python - <<'PY'
+          import zipfile, pathlib, hashlib
+          allowed = {'README.md','RELEASE-NOTES.md','build-site.mjs','test/publishing.test.mjs','index.html','content.json','lyra-logo.png','lyra-client/README.md','lyra-client/src/App.tsx','lyra-client/electron/main.cjs','lyra-client/index.html','lyra-client/package.json','lyra-client/package-lock.json','lyra-client/public/lyra-logo.png'}
+          with zipfile.ZipFile('branding-update.zip') as archive:
+              assert set(archive.namelist()) == allowed and len(archive.infolist()) == 14
+              archive.extractall('.')
+          for name in ['lyra-logo.png','lyra-client/public/lyra-logo.png']:
+              assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == '929337d5e0307ae8db0fcf364a653176524c032aa96dca52103f2c692d3e806e'
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci && npm test
+      - run: npm ci && npm test && npm run build
+        working-directory: lyra-client
+      - name: Commit branding and start publishing workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md RELEASE-NOTES.md build-site.mjs test/publishing.test.mjs index.html content.json lyra-logo.png lyra-client
+          git rm branding-update.zip lyra-client/public/lyra-mark.svg
+          git commit -m 'Use supplied Lyra logo in launcher, Windows icons and website; prepare 0.3.2'
+          git push origin HEAD:main
+          gh workflow run pages.yml --ref main
+          gh workflow run windows.yml --ref main -f create_draft=true
