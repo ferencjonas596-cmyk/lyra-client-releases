@@ -25,6 +25,15 @@ jobs:
                   assert not any(p in {'.git', '.env', 'node_modules', 'data'} for p in parts)
                   assert entry.file_size < 2_000_000
               archive.extractall('.')
+          server = pathlib.Path('lyra-admin/server.mjs')
+          text = server.read_text()
+          text = text.replace('let created;', 'let created, failure, publishedVersion;')
+          text = text.replace('res.json({ ok: true, version: candidate.version });', 'publishedVersion = candidate.version;')
+          text = text.replace('; next(error); }', '; failure = error; }')
+          before = "finally { await Promise.all((req.files || []).map(f => fs.rm(f.path, { force: true }))); busy = false; }"
+          after = "finally { const cleanup = await Promise.allSettled((req.files || []).map(f => fs.rm(f.path, { force: true }))); busy = false; for (const result of cleanup) if (result.status === 'rejected') console.error('Upload cleanup failed:', result.reason.message); } if (failure) next(failure); else res.json({ ok: true, version: publishedVersion });"
+          assert before in text
+          server.write_text(text.replace(before, after))
           PY
       - uses: actions/setup-node@v4
         with:
